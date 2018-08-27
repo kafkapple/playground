@@ -1,5 +1,19 @@
 import cv2
 from mtcnn.mtcnn import MTCNN
+from PIL import ImageGrab as ig
+import time
+
+def screen_capture():
+    ## screen capture
+    last_time = time.time()
+    while(True):
+        screen = ig.grab(bbox=(50,50,800,640))
+        print('Loop took {} seconds',format(time.time()-last_time))
+        cv2.imshow("test", np.array(screen))
+        last_time = time.time()
+        if cv2.waitKey(25) & 0xFF == ord('q'):
+            cv2.destroyAllWindows()
+            break
 
 def mtcnn_pic(detector, pic_path):
     image = cv2.imread(pic_path)
