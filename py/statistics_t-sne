@@ -1,0 +1,75 @@
+
+
+## statistics
+import scipy
+%matplotlib inline
+
+result_binom = scipy.stats.binom_test(0,5) 
+print(result_binom)
+
+# plot
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+import seaborn as sns
+
+sns.set()
+sns.set_style('whitegrid')
+sns.set_color_codes()
+
+mpl.rc('font', family='nanumgothic')
+mpl.rc('axes', unicode_minus=False)
+
+sns.set_palette('hls',4)
+
+# data read
+import numpy as np
+import pandas as pd
+#name = 'tube_stacked_bar_n5.xlsx'
+name = 'rank_cage3.csv'
+#t = pd.read_excel(name)
+t = pd.read_csv(name)
+t.head(3)
+
+## plot
+
+sns.set_context('talk')
+
+#ax = sns.violinplot( data=t, whis=np.inf)
+ax = sns.stripplot(data=t, jitter=True, size= 7, edgecolor = 'gray', linewidth=1)#,color="0.3")
+ax = sns.barplot(data=t, ci=68)
+#ax = sns.pointplot(data=t, ci=68)
+#ax.axis('off') 
+ax.grid('off')
+#ax.yaxis.label
+plt.title("OFL vs Social rank")
+#plt.xticks(y_pos, bars)
+plt.ylim(0,40)
+plt.ylabel('OFL avg freezing (%)')
+plt.show()
+
+
+## t-SNE
+
+from matplotlib.ticker import NullFormatter
+from sklearn import manifold, datasets
+from time import time
+
+#n_samples = 300
+n_components = 2
+
+
+name= 'test_data.xlsx'
+#name = 'ofl_2.xlsx'
+xy = pd.read_excel(name)
+xy = np.array(xy)
+xy = xy[:, 5:10]
+xy.shape
+
+model = manifold.TSNE(n_components = n_components, perplexity=5, learning_rate=100, n_iter =10000)
+tsne = model.fit_transform(xy)
+
+print(tsne.shape)
+#labels = model.labels
+xs=tsne[:,0]
+ys = tsne[:,1]
+plt.scatter(xs,ys)
