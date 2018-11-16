@@ -45,14 +45,31 @@ def color_setting(n_color=2):
     beach_towel = ['#fe4a49', '#2ab7ca', '#fed766', '#e6e6ea', '#f4f4f8']
     pastel_rainbow = ['#a8e6cf','#dcedc1','#ffd3b6','#ffaaa5', '#ff8b94']
                       
+    pkm_color = ['#78C850',  # Grass
+                    '#F08030',  # Fire
+                    '#6890F0',  # Water
+                    '#A8B820',  # Bug
+                    '#A8A878',  # Normal
+                    '#A040A0',  # Poison
+                    '#F8D030',  # Electric
+                    '#E0C068',  # Ground
+                    '#EE99AC',  # Fairy
+                    '#C03028',  # Fighting
+                    '#F85888',  # Psychic
+                    '#B8A038',  # Rock
+                    '#705898',  # Ghost
+                    '#98D8D8',  # Ice
+                    '#7038F8',  # Dragon
+                    ]
+    
     list_palette = [flatui,
                  beach_towel,
-                 pastel_rainbow]                      
+                 pastel_rainbow,
+                 pkm_color]                      
     
     if n_color <=3:  # color 종류 별로 안써도 되는 경우
         for i, i_p in enumerate(list_palette):
             list_palette[i] = i_p[::2]  #홀수 값만 취함. 
-    
     #### 
     sns.set_palette('hls',n_color) # Reds
     sns.set_palette(list_palette[2], n_color)
@@ -69,37 +86,53 @@ def legend_patch(current_palette, labels):
         patches.append(patch_i)
     return patches
 
-def plot_time_series(data):
-    columns = []
-    ofl_bin = 9
-    columns = np.arange(ofl_bin)+1
+# Fixing bug
+def cat_plot(data):
+    fig_size=(7,5)
+    fig, ax = plt.subplots(figsize=fig_size)#figsize=(10,4))
     
-    #test = pd.DataFrame(data = data, columns=columns)
-    
-    fig2, ax2 = plt.subplots()#figsize=(10,4))
-    sns.set_style('ticks',rc = {"lines.linewidth":0.1,"xtick.major.size": 0.1, "ytick.major.size": 1})
-    g = sns.catplot(
+    sns.catplot(
                 #palette={"male": "g", "female": "m"},
-                markers=["^"], linestyles=["-"],linewidth=0.1,
-                kind="point", data=data, ci=68, ax=ax2, aspect=0.5, scale=0.5)
+                x='timebin', y='freezing', hue='obsdem',
+                markers=["^",'o'], linestyles=["-",'--'],linewidth=0.1,
+                kind="point", data=data, ci=68, aspect=1, scale=1, legend=True, ax=ax)
+    sns.set_style('ticks',rc = {"lines.linewidth":0.1,"xtick.major.size": 0.1, "ytick.major.size": 1})
     
-    ax2.set(title = 'OFL',
+# plot time series data
+def plot_time_series(data):
+    fig_size=(7,5)
+    ylim_max = 30 # default ylim max value
+    
+    max_freezing = data.freezing.max(axis=0) # get the max value
+    if max_freezing >ylim_max:
+        ylim_max = max_freezing
+    fig, ax = plt.subplots(figsize=fig_size)
+   
+    sns.lineplot(x='timebin', y='freezing', data=data, hue='obsdem',markers=True, ax=ax, ci=68 , err_style = 'bars')
+    #sns.set_style('ticks',rc = {"lines.linewidth":1,"xtick.major.size": 1, "ytick.major.size": 1})
+    
+    ax.set(title = 'OFL',
           ylabel='freezing(%)',
           xlabel='(min)',
-          ylim=[0,20])
+          ylim=[0,ylim_max])
     
-    ax2.spines['top'].set_visible(False)
-    ax2.spines['right'].set_visible(False)
+    ax.grid(False)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
     
-    for l in g.ax.lines:
-        print(l.get_linewidth())
-        plt.setp(l,linewidth=5)
+#    for l in ax.lines:
+#        print(l.get_linewidth())
+#        #plt.setp(l,linewidth=5, ax=ax)
+    
+    fig.tight_layout()
+    fig.savefig('time_series.png', transparent = True, dpi=300)
+    fig.show()
         
 def plot_bar_scatter(data, p, current_palette, labels):
       
     patches = legend_patch(current_palette, labels)   # to add legend
    
-    fig, ax = plt.subplots( figsize=(5,5))
+    fig, ax = plt.subplots( figsize=(5,6))
     
     sns.barplot(data=data, ci=68, errwidth = 2, capsize=.05, ax= ax)
     sns.stripplot(data=data, jitter=True, size= 7,  
@@ -118,40 +151,14 @@ def plot_bar_scatter(data, p, current_palette, labels):
     ax.spines['right'].set_visible(False)
     
     change_width(ax, bar_width) # bar_width
-    add_star(ax, p, df)
+    add_star(ax, p, data)
     
     fig.tight_layout()
-    fig.savefig('test.png', transparent = True, dpi=300)
+    fig.show()
+    fig.savefig('bar_scatter.png', transparent = True, dpi=300)
 
 
-def stars(p):
-   if p < 0.0001:
-       return "****"
-   elif (p < 0.001):
-       return "***"
-   elif (p < 0.01):
-       return "**"
-   elif (p < 0.05):
-       return "*"
-   else:
-       return "-"
 
-def t_test(x,y):
-    # normality test. p>0.05 means fail
-    _, p_x = stats.shapiro(x)
-    _, p_y = stats.shapiro(y)
-    # equal variance test. p <=0.05 means fail
-    _, p_var = stats.levene(x,y) 
-    
-    if (p_x or p_y > 0.05) or p_var <=0.05 :  # normality fail
-        print('Non-parametric test is needed. MannWhitney U test.\n')
-        statistic, p_final = stats.mannwhitneyu(x,y, alternative='two-sided')
-    else:
-        print('T-test\n')
-        statistic, p_final = stats.ttest_ind(x,y)
-        
-    print('Result. Statistic: {}\n p-value: {}'.format(statistic, p_final))
-    return statistic, p_final
     
 def data_vec(data):  # convert Pandas dataframe into vectors
     n_category = len(data.keys())
@@ -167,18 +174,26 @@ def data_vec(data):  # convert Pandas dataframe into vectors
 def data_ofl_read(path):
     csv_file = glob.glob(path+'*.csv')[0]
     print(csv_file)
-    df = pd.read_csv(csv_file)
 
     # OFL time bin 만큼 추출
     time_bin = 9
-    df = df.iloc[:, 0:time_bin+1]
+    df = pd.read_csv(csv_file, header=None, skiprows=3).iloc[:,0:time_bin+1]
+    df.rename(columns={0:'subject'}, inplace=True)
+    key_subject = df.keys()[0] # pandas 로 csv read 시, 기본 key 탐색 (첫번째 row)
     
-    # pandas 로 csv read 시, 기본 key 탐색 (첫번째 row)
-    key_subject = df.keys()[0]
+    df = df.melt(id_vars='subject',var_name='timebin',value_name='freezing')
     
-    obs = df[df[key_subject].str.contains("dem|Onset|Duration")==False]  # dem, onset, duration 중 하나라도 포함되어 있으면 제외 -> obs 데이터만 추출 가능
+    obs = df[df[key_subject].str.contains("dem|exclude")==False]  # dem, exclude 중 하나라도 포함되어 있으면 제외 -> obs 데이터만 추출 가능
     dem = df[df[key_subject].str.contains("dem")==True]  # dem data
-    return obs, dem    
+    
+    dem = dem.assign(obsdem='dem')
+    obs = obs.assign(obsdem='obs')
+
+    total = [obs,dem]
+    total = pd.concat(total).sort_values(['subject', 'obsdem']).reset_index(drop=True)
+    total.to_csv('freezing_total.csv', index=False)
+
+    return total
 
 def add_star(ax, p_value, df):
     
@@ -186,40 +201,38 @@ def add_star(ax, p_value, df):
     y_min = np.min(np.array(df.min()))
     s = stars(p_value)
     print(s)
-    ax.annotate("", xy=(0, y_max), xycoords='data',
-               xytext=(1, y_max), textcoords='data',
+    ax.annotate("", xy=(0, y_max+1), xycoords='data',
+               xytext=(1, y_max+1), textcoords='data',
                arrowprops=dict(arrowstyle="-", ec='black',#'#aaaaaa',
                                connectionstyle="bar,fraction=0.2"))
     
     # fig size 5 -> 
     p = 'p = {:.2f}'.format(p_value)
-    ax.text(0.5, y_max + abs(y_max - y_min)*0.3, s,
+    
+    ax.text(0.5, y_max + abs(y_max - y_min)*0.3, s, # star
            horizontalalignment='center',
            verticalalignment='center')
     
-    ax.text(0.5, y_max + abs(y_max - y_min)*0.05, p,
+    ax.text(0.5, y_max + abs(y_max - y_min)*0.05, p, # p value
            horizontalalignment='center',
            verticalalignment='center')
 
+
+# change width of bar graph
 def change_width(ax, new_value):
     for patch in ax.patches :
         current_width = patch.get_width()
         diff = current_width - new_value
-
-        # we change the bar width
+        # change bar width
         patch.set_width(new_value)
-
-        # we recenter the bar
+        # recenter
         patch.set_x(patch.get_x() + diff * .5)
-
-
-if __name__ == '__main__':
+        
+def main():
     name = '/python/data/dom_sub.xlsx'
     df = pd.read_excel(name)
     #obs, dem = data_ofl_read()
-    
-    current_palette = color_setting(2) # 2 종류 plot 준비
-    
+
     ## Statistics. T-test 
     d_list, legend = data_vec(df)
     x = d_list[0]
@@ -227,13 +240,23 @@ if __name__ == '__main__':
     
     _, p = t_test(x,y)
     
+    ## plot
+    
+    current_palette = color_setting(2) # 2 가지 color plot 준비
+    
     plot_bar_scatter(df, p, current_palette, legend) # bar scatter plot
     
     path_ofl = '/python/data/ofl/'
-    obs, dem = data_ofl_read(path_ofl)
-    plot_time_series(obs)
-    #obs.rename(lambda x: x[1:], axis='columns')
-    obs.set_axis(['a', 'b', 'c', 'd', 'e'], axis='columns', inplace=False)
+    
+    total = data_ofl_read(path_ofl)
+
+    plot_time_series(total)
+    
+
+if __name__ == '__main__':
+    main()
+    
+
     
     
     
